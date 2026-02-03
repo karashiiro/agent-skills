@@ -1,6 +1,6 @@
 ---
 name: commit-style
-description: Standard commit style for all projects. Use this when making any commit.
+description: Use this before making any commit as the user has special formatting requirements that need to be followed for consistency across projects.
 ---
 
 # Commit Changes
