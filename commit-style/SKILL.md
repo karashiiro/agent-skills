@@ -1,6 +1,6 @@
 ---
 name: commit-style
-description: Use this before making any commit as the user has special formatting requirements that need to be followed for consistency across projects.
+description: Use this before making any commit as the user has special formatting requirements that need to be followed for consistency across projects. If you ask to commit code you just wrote, or if the user asks you to commit something, you should check this skill first to understand how the user wants you to do it.
 ---
 
 # Commit Changes
