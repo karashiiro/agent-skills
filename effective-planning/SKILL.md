@@ -63,9 +63,31 @@ Most of the time, the reasons are straightforward. Here are some common ones:
 
 Other times, the reasons are not straightforward. In these cases, don't guess, *ask the user*!
 
-Note that these are generic examples; be sure to phrase *your* answers to these questions in terms of the overarching goal. For example:
+**Smell test for weak "Why" statements:**
+
+If your "Why" answer describes WHAT you're doing or HOW you're doing it instead of WHY it matters, you have a weak answer. Look for these red flags:
+- "To refactor X" / "To extract Y" / "To create Z" (describes what, not why)
+- "To ensure consistency" / "To avoid duplication" (surface-level, no impact stated)
+- "To validate the design" / "To prove it works" (meta-work, not the real goal)
+- "Because it's the next step" / "To enable Step 3" (sequencing, not purpose)
+
+**Transform WHAT into WHY by asking: "So what? Why does that matter?"**
+
+Examples showing the transformation:
+
+**Feature work:**
 - Bad: "We're creating this storage interface to help others provide their own implementations depending on their use cases."
 - Good: "We're creating this storage interface because [FEATURE BEING BUILT] requires a storage solution, but we don't want to assume that our users use any specific one. We don't know their exact use cases, so the interface can't have escape hatches for our particular circumstances."
+
+**Refactoring work:**
+- Bad: "Extracting to a base class enforces structural consistency and avoids duplicating error-prone cleanup logic."
+- Ask "So what?": Why does consistency matter? What happens when cleanup logic is duplicated?
+- Good: "The async client and server handler both have identical 60-line task lifecycle blocks. When we fixed a shutdown bug last month, we only patched the server side, causing client-side resource leaks in production. Extracting to a shared base class means lifecycle bugs only need one fix."
+
+**Test work:**
+- Bad: "To add test coverage for the new endpoint."
+- Ask "So what?": Why does this endpoint need coverage?
+- Good: "This endpoint handles payment processing. Without tests, we risk shipping regressions that could charge users incorrectly or fail to process refunds, directly impacting revenue and trust."
 
 ### 2. "What assumptions does this step rely on?"
 Every step operates in a context. Missing dependencies cause execution failures. Hidden assumptions lead to rework. Document both explicitly before execution begins.
@@ -109,6 +131,46 @@ Every step needs a verification criterion. Before claiming completion, you must 
 
 If you can't define verification upfront, you're not ready to execute the step. Stop and clarify first.
 
+## Refactoring and Architectural Work
+
+Refactoring plans commonly have weak "Why" statements that describe the technical change without explaining the impact. This happens because the refactoring IS the task, making it easy to confuse WHAT you're doing with WHY it matters.
+
+**The real "Why" for refactoring connects to:**
+- **Maintainability**: "Current structure makes changes risky/slow/error-prone"
+- **Review-ability**: "Diff is too large to review, blocking merges"
+- **Bug risk**: "Duplication caused bugs before, will again"
+- **Cognitive load**: "Mixing concerns makes code hard to reason about"
+- **Scalability**: "Adding new cases requires editing N places"
+- **Merge conflicts**: "Structure makes upstream merges impossible"
+
+### Common Mechanical "Why" Patterns (and Fixes)
+
+| Mechanical Why (describes WHAT) | Real Why (describes IMPACT) |
+|---|---|
+| "Extract base class for structural consistency" | "The server handler and async client have 60 duplicate lines. Last bug fix only patched one, causing production resource leaks. Base class means one fix location." |
+| "Refactor X to extend Y" | "Current structure violates single responsibility - the async client is +1,003 lines mixing protocol handling and task logic, making reviews take hours and blocking merge of upstream changes." |
+| "Create handler to absorb task logic" | "The async client's 670 lines of task code are impossible to review alongside protocol changes. Extracting lets reviewers focus on one concern at a time, unblocking the 4-month-stalled merge." |
+| "Validate the abstraction works" | "If the base class design is wrong, we'll discover it when refactoring the tested server handler. Better to fail fast with tested code than build the client handler on a broken foundation." |
+| "Move duplicated code to shared location" | "Every task feature requires identical changes in 3 places (client sync, client async, server). Shared code means feature work becomes 1 change instead of 3, reducing bug risk and velocity." |
+
+### Finding the Real Why
+
+When writing a refactoring step, ask:
+
+1. **What problem does the current structure cause?**
+   - Example: "Reviewers can't understand the diff because protocol + task logic are interleaved"
+
+2. **What specific incident or pain point motivated this?**
+   - Example: "Last month's shutdown bug fix only patched server side, caused client resource leaks"
+
+3. **What becomes easier/safer/faster after this change?**
+   - Example: "After extraction, adding new task features only touches the task handler, not the main client class"
+
+4. **What risk does this eliminate?**
+   - Example: "Eliminates the 'fix in one place, miss the duplicate' class of bugs"
+
+If you can't answer these, you might not understand why the refactoring matters. **Ask the user** what problem the current structure causes.
+
 ## Common Problems
 
 | Problem | Symptom | Solution |
@@ -144,10 +206,10 @@ These indicate underspecified plans. Address them NOW, not during execution.
 
 ### ✅ Well-Specified Plan
 ```
-1. Add Redis caching to `/users` endpoint
+1. Add in-memory caching to `/users` endpoint
    - **Why**: Reduce DB load - endpoint hit 10k times/minute, mostly duplicate queries
-   - **Dependencies**: Requires Redis instance (already in staging/prod)
-   - **Verification**: Response time drops from ~200ms to <50ms on cache hit, Redis monitor shows cache hit rate >80%
+   - **Dependencies**: Requires cache service instance (already in staging/prod)
+   - **Verification**: Response time drops from ~200ms to <50ms on cache hit, cache monitor shows hit rate >80%
 
 2. Update integration tests to verify cache behavior
    - **Why**: Ensure cache invalidation works correctly when users update profiles
@@ -157,5 +219,5 @@ These indicate underspecified plans. Address them NOW, not during execution.
 3. Deploy to staging, validate metrics
    - **Why**: Confirm cache hit rate and response time improvements before prod
    - **Dependencies**: Steps 1-2 complete
-   - **Verification**: Datadog shows cache hit rate >80%, p95 latency <50ms over 1-hour observation
+   - **Verification**: Monitoring dashboard shows cache hit rate >80%, p95 latency <50ms over 1-hour observation
 ```
