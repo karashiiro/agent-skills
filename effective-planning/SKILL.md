@@ -71,6 +71,24 @@ If your "Why" answer describes WHAT you're doing or HOW you're doing it instead 
 - "To validate the design" / "To prove it works" (meta-work, not the real goal)
 - "Because it's the next step" / "To enable Step 3" (sequencing, not purpose)
 
+**Connect every step to the overarching goal:**
+
+Every plan has a goal stated at the top. Every step's "Why" should connect back to that goal. If you can't draw a line from your step to the stated goal, you haven't explained why it matters.
+
+For each step, ask: **"How does this serve the plan's goal?"**
+
+Example plan goal: *"Reduce cognitive load for library consumers and code reviewers by eliminating unused abstractions"*
+
+- Bad (mechanical): "This utility class has zero callers"
+- Ask: How does deleting it serve the goal of reducing cognitive load?
+- Good (connects to goal): "This utility class adds 150 lines that reviewers must scan when tracing request handling, only to discover it's never instantiated. Library consumers browsing the public API see it alongside the real implementation, doubling the conceptual surface area. Deleting it removes a red herring that wastes reviewer time and confuses consumers."
+
+Example plan goal: *"Prevent duplication bugs by consolidating sync/async implementations"*
+
+- Bad (mechanical): "The sync handler duplicates the async handler's logic"
+- Ask: How does consolidation prevent duplication bugs?
+- Good (connects to goal): "The sync and async handlers both implement 8 identical validation methods. Last quarter, we fixed a null-pointer bug in the async version but forgot to patch sync, causing production crashes. Making sync delegate to async means bug fixes only need one location, eliminating the 'fix one, miss the duplicate' failure mode."
+
 **Transform WHAT into WHY by asking: "So what? Why does that matter?"**
 
 Examples showing the transformation:
