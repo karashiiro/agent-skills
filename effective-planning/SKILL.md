@@ -37,10 +37,11 @@ Planning is iterative. Start rough, refine until questions have solid answers.
 3. **Identify gaps** - Which questions can't you answer with confidence?
    - If you're guessing, handwaving, or saying "probably" → you have a gap
 
-4. **Fill the gaps:**
+4. **Close open questions IMMEDIATELY:**
    - **Investigate**: Dispatch agents to research the codebase in parallel
    - **Ask**: If agents can't clarify, ask the user directly
    - **Document**: Record what you learned ("Verified: Redis configured in prod")
+   - **CRITICAL**: Do NOT leave questions open "to figure out later" - they may invalidate your entire plan
 
 5. **Refine the step** - Update the step with answers from investigation
 
@@ -149,6 +150,62 @@ Every step needs a verification criterion. Before claiming completion, you must 
 
 If you can't define verification upfront, you're not ready to execute the step. Stop and clarify first.
 
+## Close Open Questions During Planning, Not Execution
+
+**The Rule:** If you have a question about how something works, what exists, or what approach to take, close that question NOW during planning. Do not leave it for execution.
+
+**Why this matters:**
+- Open questions often reveal faulty assumptions that invalidate other parts of your plan
+- Discovering these mid-execution forces costly rework and compromises
+- Questions answered in parallel during planning cost minutes; discovered serially during execution cost hours
+
+**How to close questions:**
+
+1. **Identify the question explicitly**
+   - "Does the caching layer support TTL configuration?"
+   - "Which authentication middleware is currently in use?"
+   - "Should we use approach A or approach B for this?"
+
+2. **Investigate in parallel**
+   - Dispatch multiple research agents simultaneously
+   - Search for existing implementations, patterns, configuration
+   - Read relevant files to verify assumptions
+
+3. **Ask the user if investigation can't resolve it**
+   - Technical questions agents can usually answer by reading code
+   - Design decisions and preferences require user input
+   - Don't guess when you should ask
+
+4. **Document the answer in your plan**
+   - "Investigated: Auth uses JWT middleware in `src/auth/jwt.ts`"
+   - "User confirmed: Use approach B (webhook-based) for real-time updates"
+   - "Verified: Cache config supports TTL in `redis.conf` line 47"
+
+5. **Update dependent steps based on answers**
+   - If investigation reveals surprises, revise your plan accordingly
+   - Better to discover now than mid-execution
+
+**Example:**
+
+Bad (leaving questions open):
+```
+1. Add caching to API endpoints
+   - Figure out which cache to use
+   - Probably Redis or in-memory
+```
+
+Good (closing questions during planning):
+```
+[Dispatches research agent to check existing infrastructure]
+[Reads config files to verify cache setup]
+[Finds Redis already configured in production]
+
+1. Add Redis caching to API endpoints
+   - Verified: Redis 7.0 already running in staging/prod (config in `infrastructure/redis.yml`)
+   - Verified: Connection pooling configured with 10 connections max
+   - Cache layer will use existing Redis instance, no new infrastructure needed
+```
+
 ## Refactoring and Architectural Work
 
 Refactoring plans commonly have weak "Why" statements that describe the technical change without explaining the impact. This happens because the refactoring IS the task, making it easy to confuse WHAT you're doing with WHY it matters.
@@ -193,23 +250,28 @@ If you can't answer these, you might not understand why the refactoring matters.
 
 | Problem | Symptom | Solution |
 |---------|---------|----------|
-| **Assuming vs. verifying** | "It probably works this way" | Ask the user or dispatch an agent to investigate |
+| **Leaving open questions** | "We'll decide on the cache solution later", "Need to figure out the auth approach" | Close ALL questions during planning - dispatch agents to investigate or ask the user |
+| **Assuming vs. verifying** | "It probably works this way" | Dispatch agents to verify assumptions before writing the plan |
 | **Vague acceptance criteria** | "Make it better", "Fix the issue" | Define specific, measurable outcomes before starting |
 | **Missing dependencies** | Step 3 needs Step 1's output but order unclear | Explicitly document "This requires [Step X] because..." |
 | **Skipping verification planning** | "We'll test it after" | Define HOW you'll verify BEFORE executing |
 | **Paralysis by over-planning** | Spending hours planning a 10-minute task | Match planning depth to task complexity |
-| **Ignoring unknowns** | Glossing over "figure it out later" parts | Surface and resolve unknowns during planning, not execution |
+| **Deferring decisions** | "We can choose between A/B during implementation" | Make architectural decisions during planning when they're cheapest to change |
 
 ## Red Flag Language
 
 If you find yourself thinking or writing any of these during planning, STOP:
 - "We'll figure that out when we get there"
+- "We'll decide between X and Y during implementation"
+- "Need to investigate which approach to use" (without actually investigating)
 - "This part is straightforward" (without explaining why)
 - "Should be easy to..." (without verifying assumptions)
 - "Something like..." (vague handwaving)
 - "Probably works like..." (guessing instead of researching)
+- "TBD" / "TODO: Research" / "To be determined"
+- "We can explore options later"
 
-These indicate underspecified plans. Address them NOW, not during execution.
+These indicate underspecified plans with open questions. Address them NOW, not during execution. Dispatch agents to investigate or ask the user to close these questions before finalizing your plan.
 
 ## Example: Before and After
 
