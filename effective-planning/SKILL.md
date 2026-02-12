@@ -1,6 +1,6 @@
 ---
 name: effective-planning
-description: Use when entering plan mode or creating any multi-step plan - applies three questions to each step (why, what depends on, how verify) to prevent underspecified work that causes problems during execution
+description: Use while writing plan steps to ensure each is executable - asks three questions (why, what depends on, how verify) that transform vague intentions into concrete actions with clear purpose, dependencies, and success criteria
 ---
 
 # Effective Planning
