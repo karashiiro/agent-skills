@@ -1,6 +1,6 @@
 ---
 name: effective-planning
-description: Use while writing plan steps to ensure each is executable - asks three questions (why, what depends on, how verify) that transform vague intentions into concrete actions with clear purpose, dependencies, and success criteria
+description: MANDATORY for writing implementation plans - asks three questions (why, what depends on, how verify) that transform vague steps into executable actions with verified purpose, dependencies, and success criteria
 ---
 
 # Effective Planning
