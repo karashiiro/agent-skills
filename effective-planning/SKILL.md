@@ -150,6 +150,73 @@ Every step needs a verification criterion. Before claiming completion, you must 
 
 If you can't define verification upfront, you're not ready to execute the step. Stop and clarify first.
 
+## Include Automated Verification After Major Checkpoints
+
+**Run automated checks (tests, builds, type checking) after each major phase or milestone, not just at the end.** Waiting until the end to verify means discovering integration issues after you've built multiple layers on top of broken foundations.
+
+**Why this matters:**
+- Catching build/test failures early means fixing them in isolation, not debugging cascading failures
+- Each phase's verification proves the foundation is solid before the next phase builds on it
+- Type errors, test failures, and build breaks are cheap to fix immediately, expensive to fix later
+- If phase 3 depends on phase 1's output, you need proof phase 1 actually works before starting phase 3
+
+**What counts as automated verification:**
+- **`npm test` / `pytest` / test runner** - Existing tests must still pass
+- **`npm run build` / `cargo build` / build command** - Code must compile without errors
+- **`tsc --noEmit` / type checker** - No type errors introduced
+- **`npm run lint` / linter** - Code style violations caught
+- **Running the specific new tests you added** - New functionality verified
+
+**When to add verification steps:**
+
+Add explicit automated verification steps:
+- **After implementing a complete feature** - Before moving to the next feature
+- **After major refactoring** - Before building on the new structure
+- **After changing core interfaces/contracts** - Before updating all callers
+- **After database migrations** - Before writing code that depends on the new schema
+- **Before claiming a phase is "done"** - Automated checks are the proof
+
+**Make verification concrete and automated:**
+
+❌ Bad (vague, manual, no automation):
+```
+Phase 2: Update user service
+- Verification: Service works correctly
+```
+
+✅ Good (concrete, automated, actionable):
+```
+Phase 2: Update user service to use new auth middleware
+- Verification:
+  - Run `npm test` - all 247 tests pass (proves no regressions)
+  - Run `npm run build` - builds without errors (proves types are correct)
+  - Run `curl localhost:3000/api/users` with valid token - returns 200 (proves integration works)
+```
+
+❌ Bad (tests at the very end only):
+```
+Phase 1: Refactor authentication layer
+Phase 2: Update all API endpoints to use new auth
+Phase 3: Update frontend to send new token format
+Phase 4: Run tests
+```
+^This discovers that Phase 1's refactor broke things only after completing Phases 2 and 3.
+
+✅ Good (verification after each phase):
+```
+Phase 1: Refactor authentication layer
+- Verification: Run `npm test` - auth tests pass, no regressions in other tests
+
+Phase 2: Update all API endpoints to use new auth
+- Verification: Run `npm test` - endpoint tests pass with new auth
+- Verification: Run `npm run build` - no TypeScript errors
+
+Phase 3: Update frontend to send new token format
+- Verification: Run `npm test` - frontend tests pass
+- Verification: Manual test: log in via UI, verify API calls succeed
+```
+^Each phase proves it works before the next phase depends on it.
+
 ## Close Open Questions During Planning, Not Execution
 
 **The Rule:** If you have a question about how something works, what exists, or what approach to take, close that question NOW during planning. Do not leave it for execution.
@@ -287,17 +354,26 @@ These indicate underspecified plans with open questions. Address them NOW, not d
 ### ✅ Well-Specified Plan
 ```
 1. Add in-memory caching to `/users` endpoint
-   - **Why**: Reduce DB load - endpoint hit 10k times/minute, mostly duplicate queries
-   - **Dependencies**: Requires cache service instance (already in staging/prod)
-   - **Verification**: Response time drops from ~200ms to <50ms on cache hit, cache monitor shows hit rate >80%
+   - **Why**: Reduce DB load - endpoint hit 10k times/minute, mostly duplicate queries causing unnecessary database round trips
+   - **Dependencies**: Requires cache service instance (verified: already running in staging/prod at `cache.internal:6379`)
+   - **Verification**:
+     - Run `npm test` - all existing tests pass (no regressions)
+     - Run `npm run build` - builds without TypeScript errors
+     - Manual test: `curl localhost:3000/api/users` - response time <50ms on cache hit
+     - Cache monitor shows hit rate >80% over 5-minute test
 
-2. Update integration tests to verify cache behavior
-   - **Why**: Ensure cache invalidation works correctly when users update profiles
-   - **Dependencies**: Step 1 complete
-   - **Verification**: Test suite passes, new tests specifically check stale data not returned
+2. Add integration tests for cache invalidation
+   - **Why**: Cache invalidation is notoriously hard - if we get it wrong, users see stale profile data after updates
+   - **Dependencies**: Step 1 complete (cache implementation exists to test against)
+   - **Verification**:
+     - Run `npm test` - new cache tests pass (stale data not returned after profile update)
+     - Run `npm test` - all 247 tests pass (cache doesn't break existing functionality)
 
-3. Deploy to staging, validate metrics
-   - **Why**: Confirm cache hit rate and response time improvements before prod
-   - **Dependencies**: Steps 1-2 complete
-   - **Verification**: Monitoring dashboard shows cache hit rate >80%, p95 latency <50ms over 1-hour observation
+3. Deploy to staging and validate with production traffic patterns
+   - **Why**: Performance improvements must hold under real load before we risk production deployment
+   - **Dependencies**: Steps 1-2 complete (implementation done, tests prove correctness)
+   - **Verification**:
+     - Staging deployment succeeds without errors
+     - Run smoke tests in staging - `npm run test:staging` passes
+     - Monitoring dashboard shows cache hit rate >80%, p95 latency <50ms over 1-hour observation with realistic traffic
 ```
