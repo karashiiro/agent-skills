@@ -1,6 +1,6 @@
 ---
 name: effective-planning
-description: Use BEFORE creating/writing/designing any implementation plan or breaking down multi-step tasks - especially in plan mode or when asked to "plan", "design", "outline", "create a plan", or "break down" work - applies three questions (why, what depends on, how verify) to transform vague steps into executable actions with verified purpose, dependencies, and success criteria
+description: Use when asked to design or implement any code - the user has strict quality gates which must be followed in addition to other instructions to avoid incorrect or underspecified plans.
 ---
 
 # Effective Planning
